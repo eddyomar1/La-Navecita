@@ -1,107 +1,60 @@
 <!DOCTYPE html>
-<html>
-<head> 
-<title>la navesita</title>
-<meta name="viewport" content="width=device-width, initial-scale=0.4, maximum-scale=0.4, user-scalable=no, shrink-to-fit=no">
-<style>
-
-body{background-color:gray; user-select: none; -moz-user-select:none; -webkit-user-select: none;}
-
-#au{display: none;}
-
-button{font-size: 30px; padding: 20px 20px 20px 20px; margin: 20px 20px 20px 20px;}
-
-#tipo{font-size: 30px;}
-
-#ventana_de_entrada{position: fixed; background-color: teal; width: 600px; height: 400px;}
-
-.ndp{width:150px; margin: 30px 30px 30px 30px;}
-
-#ne{width:50px;}
-
-
-</style>
-<link  rel="icon" href="https://lh3.googleusercontent.com/proxy/N9V2L5TyOd7hSSXLsL4v78XB8g6qf-qn71MWoZT5_jH1marpskzweUAp4T29kusvkTCG7KJLkNZ7hTIqWkVj_A6zoJ_0yo6E7C1YBShrdQ76pnmBm30" type="image/png" />
-<script>
-
-
-
-function tipo(){
-
-var ancho = screen.width;
-var alto = screen.height;
-
-    var vde = document.getElementById('ventana_de_entrada');
-    vde.style.top = (alto - 400)/2 + 'px';
-   vde.style.left = (ancho - 600)/2 + 'px';
-    // vde.style.marginLeft = (ancho / 1.2) + 'px';
-
-
-    if(ancho <= 1000){document.getElementById('botones').style.display = 'block'; alert('El minijuego aun no esta muy bien optimizado para moviles');     vde.style.left = ancho/2 + 'px';}
-    else{document.getElementById('botones').style.display = 'none'; alert('El minijuego a sido optimizado para PC');}
-    
-    }
-
-
-
-
-
-
-    </script>
-    
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0e14">
+  <meta name="description" content="ETOTU: un arcade espacial. Elige tu nave, esquiva enemigos y conquista tu próximo récord.">
+  <title>ETOTU — Orbital Arcade</title>
+  <link rel="icon" href="navec.png" type="image/png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="magia.js" defer></script>
 </head>
-<body align="center" onload="tipo()">
+<body>
+  <div class="app-shell">
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="ETOTU, inicio"><span class="brand-mark" aria-hidden="true">✳</span><span>ETOTU<small>ORBITAL ARCADE</small></span></a>
+      <div class="header-right"><span class="system-status"><i></i> TODOS LOS SISTEMAS LISTOS</span><button class="icon-button" id="sound" aria-label="Activar sonido" aria-pressed="false" title="Activar sonido"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path id="sound-waves" d="m16 9 6 6m0-6-6 6"/></svg></button><button class="help-button" id="help">Cómo jugar <span>↗</span></button></div>
+    </header>
 
-<audio src="playsong.ogg" preload="auto" controls autoplay loop id="au"></audio>
-<!--button id="play">play</button-->
-<h1 id="w"></h1>
-<h1 id="msc"></h1>
+    <main>
+      <section class="page-heading"><div><div class="eyebrow">UN PEQUEÑO ARCADE. UN UNIVERSO POR DEFENDER.</div><h1>Fuera de órbita<span>.</span></h1><p>Elige tu nave. Encuentra tu ritmo. Supera tus límites.</p></div><div class="sector-tag"><span class="orbit-icon" aria-hidden="true">◎</span><div>SECTOR 07<small>Frontera exterior</small></div></div></section>
 
-<canvas width="700" height="600" id="can" style="border: 2px solid black;" >El minijuego no puede correr en este navegador. porfavor utiize chrome</canvas>
+      <div class="mission-layout">
+        <section class="game-panel" aria-label="Zona de juego">
+          <div class="hud"><div><span>PUNTUACIÓN</span><strong id="score">000000</strong></div><div><span>TU RÉCORD <b>↗</b></span><strong id="best">000000</strong></div><div><span>OLEADA</span><strong id="wave">01<span> / ∞</span></strong></div><div class="shield-stat"><span>ESCUDO</span><strong id="shield" aria-label="3 de 3 escudos"><i></i><i></i><i></i></strong></div></div>
+          <div class="arena" id="arena">
+            <canvas id="can" tabindex="0" aria-label="Juego de naves. Usa WASD o las flechas para moverte. El disparo es automático. P para pausar.">Tu navegador necesita soporte de canvas para jugar.</canvas>
+            <div class="arena-coordinate" aria-hidden="true"><i></i> LIVE FEED <span>07.24 / −18.09</span></div>
+            <button id="pause" class="pause-button" aria-label="Pausar partida" title="Pausar (P)" hidden>Ⅱ</button>
+            <div class="game-overlay" id="overlay">
+              <div class="mission-label" id="overlay-label">MISIÓN 001 <span>•</span> SUPERVIVENCIA</div>
+              <h2 id="overlay-title">El universo<br>es tuyo<span>.</span></h2>
+              <p id="overlay-description">Una nave. Infinitas posibilidades.<br>¿Hasta dónde puedes llegar?</p>
+              <button class="launch-button" id="play"><span id="play-label">Iniciar misión</span><span aria-hidden="true">↗</span></button>
+              <span class="launch-hint" id="launch-hint">PULSA ENTER PARA DESPEGAR</span>
+            </div>
+            <div id="announcement" class="announcement" role="status" aria-live="polite"></div>
+            <div class="arena-bottom" aria-hidden="true"><span>ET–07 <b>EXPLORACIÓN PROFUNDA</b></span><span>✦ <b>NO HAY LÍMITES AQUÍ</b></span></div>
+          </div>
+          <div class="control-strip"><span class="desktop-controls"><kbd>W</kbd><span class="key-group"><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>Mover nave</span></span><span class="touch-hint">☝ Arrastra para mover tu nave</span><span><i class="auto-dot"></i> Disparo automático</span><button id="pause-text" disabled><kbd>P</kbd> Pausar</button></div>
+        </section>
 
-<div id="botones">
-    
-<button id="bu">up</button><br>
-<button id="bl">left</button>
-<!-- <button id="bs">Shooting</button> -->
-<button id="br">right</button><br>
-<button id="bd">down</button>
-</div>
+        <aside class="hangar">
+          <div class="hangar-heading"><div class="eyebrow">PREPARA EL DESPEGUE</div><h2>Tu nave, tu estilo<span>.</span></h2><p>Dos formas de conquistar el espacio.</p></div>
+          <div class="ship-options" role="group" aria-label="Selecciona tu nave">
+            <button class="ship-card selected" data-ship="vanguard" aria-pressed="true"><span class="ship-top"><span>01 / INTERCEPTOR</span><span class="selection-mark">✓</span></span><span class="ship-art"><img src="navec.png" alt="Nave Vanguard azul con alas en punta" draggable="false"></span><span class="ship-info"><strong>Vanguard</strong><span class="ship-badge">EQUILIBRADA</span></span><span class="ship-description">Precisión bajo presión.</span><span class="ship-spec"><span>VELOCIDAD <i class="stat-bars"><b></b><b></b><b></b><b></b><b class="empty"></b></i></span><span>POTENCIA <i class="stat-bars"><b></b><b></b><b></b><b></b><b class="empty"></b></i></span></span></button>
+            <button class="ship-card" data-ship="spectre" aria-pressed="false"><span class="ship-top"><span>02 / EXPLORADOR</span><span class="selection-mark">✓</span></span><span class="ship-art spectre-art"><img src="navep.png" alt="Nave Spectre celeste de alas anchas" draggable="false"></span><span class="ship-info"><strong>Spectre</strong><span class="ship-badge">ÁGIL</span></span><span class="ship-description">Tan veloz como tu instinto.</span><span class="ship-spec"><span>VELOCIDAD <i class="stat-bars"><b></b><b></b><b></b><b></b><b></b></i></span><span>POTENCIA <i class="stat-bars"><b></b><b></b><b></b><b class="empty"></b><b class="empty"></b></i></span></span></button>
+          </div>
+          <div class="hangar-note"><span aria-hidden="true">✧</span><p id="hangar-note">El piloto hace la diferencia.<br><strong>Tu próximo récord está ahí fuera.</strong></p></div>
+        </aside>
+      </div>
 
-
-<div id="ventana_de_entrada">
-<h2 id="wt"></h2>
-
-<img id="nc" class="ndp" src="navec.png">
-<img id="np" class="ndp" src="navep.png" style="filter: saturate(10%);">
-<img id="ne" class="ndp" src="ne.png" style="filter: saturate(10%);" title="esta nave aun no disponible">
-
-
-
-<br>
-
-<button id="play">play</button>
-
-</div>
-
-<!--button id="pausa">pausa</button-->
-<!-- 
-<script>
-
-setInterval(()=>{
-    
-    var sc = document.getElementById('w').innerHTML;
-    var msc = document.getElementById('msc').innerHTML;;
-
-if(sc > msc){msc = sc}
-
-}, 100);
-
-
-</script> -->
-
-<script type="text/javascript" src="magia.js"></script>
-
+      <section class="briefing" aria-label="Consejos de misión"><div><span class="briefing-number">01</span><div><h3>Muévete con intención</h3><p>Esquiva y evita que los enemigos pasen.</p></div><span class="briefing-icon" aria-hidden="true">⌖</span></div><div><span class="briefing-number">02</span><div><h3>Cuida tu escudo</h3><p>Recoge energía para seguir en combate.</p></div><span class="briefing-icon" aria-hidden="true">⛨</span></div><div><span class="briefing-number">03</span><div><h3>Ve un poco más lejos</h3><p>Cada oleada es un nuevo desafío.</p></div><span class="briefing-icon" aria-hidden="true">↗</span></div></section>
+    </main>
+    <footer><span>HECHO PARA JUGAR. <strong>CREADO PARA VOLVER.</strong></span><span>ETOTU <i>©</i> 2026 <span class="footer-star">✳</span></span></footer>
+  </div>
+  <dialog id="help-dialog"><button class="dialog-close icon-button" id="close-help" aria-label="Cerrar instrucciones">×</button><div class="eyebrow">MANUAL DE VUELO</div><h2>Todo listo, piloto.</h2><p>Sobrevive a las oleadas y consigue la mayor puntuación. Tu nave dispara automáticamente.</p><ul><li><strong>Muévete</strong><span>WASD, flechas o arrastra sobre el juego.</span></li><li><strong>Pausa</strong><span>P, Escape o el botón Ⅱ. Al salir de la pestaña, la partida se pausa.</span></li><li><strong>Cuida el escudo</strong><span>Tienes 3 cargas. Pierdes una al recibir un impacto o dejar pasar un enemigo. Los orbes verdes recuperan una carga; con el escudo lleno, dan 50 puntos.</span></li><li><strong>Supera tu récord</strong><span>Destruye enemigos y completa oleadas. El récord se guarda en este navegador.</span></li></ul><button class="launch-button" id="got-it">Entendido <span>↗</span></button></dialog>
+  <audio id="au" src="playsong.ogg" preload="none" loop></audio>
 </body>
-
 </html>
