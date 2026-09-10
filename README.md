@@ -2,7 +2,11 @@
 
 Arcade espacial en español, hecho con HTML, CSS y Canvas 2D. No necesita compilación ni dependencias de JavaScript.
 
-## Ejecutar
+## Jugar en línea
+
+[Jugar La Navecita en GitHub Pages](https://eddyomar1.github.io/La-Navecita/)
+
+## Ejecutar localmente
 
 Abre `index.html` en un navegador moderno, o sirve la carpeta:
 
@@ -42,6 +46,16 @@ Los suministros aparecen cada 12 segundos (cada 8 contra un jefe) y recorren los
 
 El equipamiento bajo el hangar se actualiza al seleccionar nave; la franja bajo el juego muestra efectos activos, segundos restantes y cargas de blindaje. La cantidad de enemigos por oleada tiene un máximo de 36; la resistencia de enemigos comunes también tiene un límite para mantener viables las oleadas altas.
 
+## Rayo sísmico · Reliquia del jefe 10
+
+Al derrotar al jefe de la oleada **10**, aparece una reliquia turquesa **ϟ**. Debes recogerla para desbloquear el ataque. No sale de enemigos normales, suministros ni del jefe 100; permanece en el borde inferior si no la recoges al caer.
+
+- **Activación:** mantén **R**, o el botón del rayo en móvil, durante **3 segundos continuos**. Puedes seguir moviéndote mientras cargas. Soltar antes, pausar o cambiar de pantalla cancela la carga sin gastar usos.
+- **Límite:** **5 descargas por partida**, compartidas por la nave elegida. No se recargan ni se conservan al reiniciar.
+- **Espera:** **60 segundos de juego entre descargas**, desde el momento del disparo. La pausa congela este tiempo. Debes soltar y volver a mantener la tecla o el botón para una nueva descarga; mantenerlo no repite el ataque automáticamente.
+- **Potencia:** haz vertical de 180 unidades de ancho hacia arriba desde la posición donde disparaste, durante 1,6 s. Inflige 80 de daño por enemigo y 500 al jefe, una sola vez por objetivo en cada descarga. Elimina proyectiles hostiles dentro del haz y protege la nave durante la descarga.
+- **Presentación:** utiliza el `rayo.png` original, con núcleo azul, ramificaciones turquesas, brillo y sacudida de cámara decreciente. La preferencia de movimiento reducido desactiva la sacudida. El panel muestra usos restantes, progreso de carga y espera.
+
 ## Pruebas del motor
 
 Requieren Node.js con `node:test`, sin instalar dependencias:
@@ -50,7 +64,7 @@ Requieren Node.js con `node:test`, sin instalar dependencias:
 node tests/game.test.cjs
 ```
 
-Cubren las dos oleadas de jefe, ataques y daño, bloqueo del avance, los cinco objetos para ambas naves, recolección, caducidad y reinicio. La prueba carga el motor en un entorno aislado; no introduce atajos ni acceso al estado interno en el juego publicado.
+Cubren las dos oleadas de jefe, ataques y daño, bloqueo del avance, los cinco objetos para ambas naves, recolección, caducidad y reinicio. También verifican la exclusividad de la reliquia, la carga continua, cancelación, cinco usos máximos, espera de 60 segundos, daño del haz y conservación del objeto al caer. La prueba carga el motor en un entorno aislado; no introduce atajos ni acceso al estado interno en el juego publicado.
 
 ## Archivos
 
@@ -73,3 +87,5 @@ Las fuentes de Google Fonts son opcionales; hay fuentes de sistema de respaldo. 
 7. Prueba F y el botón de pantalla completa, tanto para entrar como para salir; en móvil cambia la orientación.
 8. Recoge cada tipo de objeto con ambas naves y compara sus efectos con el equipamiento. Pausa y comprueba que los segundos restantes no cambian.
 9. En las oleadas 10 y 100, comprueba la animación, la barra de salud, la fase de furia y el paso a la siguiente oleada al derrotar al jefe.
+
+10. Recoge la reliquia del jefe 10. Mantén R menos de 3 s y suelta: no debe gastar usos. Mantén 3 s: debe disparar, sacudir la escena y descontar uno. Verifica los 60 s de espera y el botón táctil.

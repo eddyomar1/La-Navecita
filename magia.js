@@ -22,10 +22,16 @@
     core: { name: 'Núcleo', symbol: '*', color: '#ff95cd', vanguard: ['Pulso de asalto', 'Borra proyectiles hostiles e inflige 12 de daño a cada enemigo y 35 al jefe.', 'INSTANTÁNEO'], spectre: ['Dron orbital', 'Un dron te acompaña y dispara proyectiles guiados de 3 de daño.', '12 SEGUNDOS'] }
   };
   const itemTypes = Object.keys(items);
+  // This relic is deliberately outside the ordinary supply/drop pool.
+  const lightningItem = { name: 'Rayo sísmico', symbol: 'ϟ', color: '#72f3fa' };
+  const SPECIAL = { chargeTime: 3, cooldown: 60, uses: 5, duration: 1.6, halfWidth: 90, damage: 80, bossDamage: 500 };
+  const freshSpecial = () => ({ unlocked: false, uses: 0, cooldown: 0, charge: 0, needsRelease: false, beam: null, quake: 0 });
+  let special = freshSpecial(), specialDropGranted = false, specialMarkup = '';
+  const specialHolds = new Set();
   let effects = {}, barrierCharges = 0, droneCooldown = 0, supplyTimer = 8, supplyIndex = 0;
   let boss = null, pulseRing = null, abilityMarkup = '';
   const sprites = {};
-  for (const file of ['navec.png', 'navep.png', 'alienave.png', 'alien.png']) {
+  for (const file of ['navec.png', 'navep.png', 'alienave.png', 'alien.png', 'rayo.png']) {
     const img = new Image(); img.src = file; sprites[file] = img;
   }
   let selected = storage.get('ship', 'vanguard');
@@ -53,7 +59,7 @@
     canvas.width = Math.round(bounds.width * dpr);
     canvas.height = Math.round(bounds.height * dpr);
     ctx.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
-    for (const objects of [[player], boss ? [boss] : [], enemies, bullets, enemyBullets, particles, pickups]) {
+    for (const objects of [[player], boss ? [boss] : [], special.beam ? [special.beam] : [], enemies, bullets, enemyBullets, particles, pickups]) {
       for (const object of objects) { object.x *= width / oldWidth; object.y *= height / oldHeight; if (object.baseX !== undefined) object.baseX *= width / oldWidth; }
     }
   }
@@ -94,6 +100,14 @@
   }
   function dropItem(x, y, type = itemTypes[Math.floor(Math.random() * itemTypes.length)]) { pickups.push({ x, y, age: 0, type }); }
   function collectItem(type) {
+    if (type === 'lightning') {
+      if (specialDropGranted && !special.unlocked) {
+        special.unlocked = true; special.uses = SPECIAL.uses;
+        announce('RAYO SÍSMICO · 5 USOS · MANTÉN R 3 S');
+        burst(player.x, player.y, lightningItem.color, 26); tone(1100, .3); updateSpecialHud();
+      }
+      return;
+    }
     const vanguard = selected === 'vanguard';
     if (type === 'repair') {
       if (lives === 3) score += 50;
@@ -113,6 +127,90 @@
     burst(player.x, player.y, items[type].color, 14); tone(850, .16); updateHud(); updateAbilities();
   }
 
+  function cancelSpecialCharge() {
+    specialHolds.clear(); special.charge = 0; special.needsRelease = false;
+    updateSpecialHud();
+  }
+  function holdSpecial(source) {
+    if (state !== 'playing' || !special.unlocked || special.uses <= 0 || special.cooldown > 0 || special.needsRelease) return;
+    specialHolds.add(source);
+  }
+  function releaseSpecial(source) {
+    specialHolds.delete(source);
+    if (specialHolds.size === 0) { special.charge = 0; special.needsRelease = false; }
+    updateSpecialHud();
+  }
+  function updateSpecialHud() {
+    let status = specialDropGranted ? 'Recoge la reliquia ϟ que dejó el jefe.' : 'Consigue la reliquia del jefe de la oleada 10.';
+    let label = 'Mantén 3 s';
+    if (special.unlocked) {
+      if (!special.uses) { status = 'Has usado las cinco descargas de esta partida.'; label = 'Agotado'; }
+      else if (special.cooldown > 0) {
+        const seconds = Math.ceil(special.cooldown);
+        label = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+        status = 'Recargando el núcleo del rayo.';
+      } else if (special.charge > 0) { status = 'Cargando… soltar cancela la descarga.'; label = `${special.charge.toFixed(1)} / 3 s`; }
+      else status = 'Listo. Mantén R o el botón durante 3 s.';
+      if (state === 'paused') status = 'En pausa. La carga se cancela; la espera se detiene.';
+      if (state === 'ended') status = 'Misión terminada. Consigue la reliquia en tu próxima partida.';
+    }
+    const uses = special.unlocked ? `${special.uses} / ${SPECIAL.uses} USOS` : 'BLOQUEADO';
+    const markup = `${status}|${label}|${uses}|${state}`;
+    if (markup !== specialMarkup) {
+      $('special-status').textContent = status; $('special-uses').textContent = uses; $('special-button-text').textContent = label;
+      $('special-attack').disabled = state !== 'playing' || !special.unlocked || !special.uses || special.cooldown > 0;
+      specialMarkup = markup;
+    }
+    $('special-progress').style.width = `${special.charge / SPECIAL.chargeTime * 100}%`;
+    $('special-control').classList.toggle('charging', special.charge > 0);
+  }
+  function fireSpecial() {
+    if (state !== 'playing' || !special.unlocked || special.uses <= 0 || special.cooldown > 0 || special.charge < SPECIAL.chargeTime || special.needsRelease) return;
+    special.uses--; special.cooldown = SPECIAL.cooldown; special.charge = 0; special.needsRelease = true;
+    special.beam = { x: player.x, y: player.y - 20, life: SPECIAL.duration, hitTargets: new Set() };
+    special.quake = reducedMotion ? 0 : SPECIAL.duration;
+    player.invulnerable = Math.max(player.invulnerable, SPECIAL.duration);
+    tone(65, .7, 'sawtooth', .12); tone(180, .45, 'triangle', .06);
+    burst(player.x, player.y - 22, lightningItem.color, 42);
+    announce(`RAYO SÍSMICO · ${special.uses} USOS RESTANTES`);
+    applySpecialDamage(); updateSpecialHud();
+  }
+  function applySpecialDamage() {
+    const beam = special.beam;
+    if (!beam) return;
+    const inBeam = (target, radius = 0) => Math.abs(target.x - beam.x) <= SPECIAL.halfWidth + radius && target.y >= -radius && target.y <= beam.y + radius;
+    for (const enemy of enemies) {
+      if (enemy.hp > 0 && inBeam(enemy, enemy.radius) && !beam.hitTargets.has(enemy)) {
+        beam.hitTargets.add(enemy); enemy.hp -= SPECIAL.damage;
+        if (enemy.hp <= 0) destroyEnemy(enemy);
+      }
+    }
+    if (boss && boss.y >= 0 && inBeam(boss, boss.rx) && !beam.hitTargets.has(boss)) { beam.hitTargets.add(boss); damageBoss(SPECIAL.bossDamage); }
+    enemyBullets = enemyBullets.filter(bullet => !inBeam(bullet, 5));
+  }
+  function updateSpecial(dt) {
+    if (state !== 'playing') return;
+    special.cooldown = Math.max(0, special.cooldown - dt);
+    special.quake = Math.max(0, special.quake - dt);
+    if (special.beam) {
+      special.beam.life -= dt;
+      if (special.beam.life <= 0) special.beam = null;
+      else applySpecialDamage();
+    }
+    if (specialHolds.size > 0 && !special.needsRelease && special.unlocked && special.uses > 0 && special.cooldown === 0) {
+      special.charge = Math.min(SPECIAL.chargeTime, special.charge + dt);
+      if (special.charge >= SPECIAL.chargeTime) fireSpecial();
+    }
+    updateSpecialHud();
+  }
+  const specialButton = $('special-attack');
+  specialButton.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    event.preventDefault(); holdSpecial(`pointer:${event.pointerId}`); specialButton.setPointerCapture(event.pointerId);
+  });
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) specialButton.addEventListener(type, event => releaseSpecial(`pointer:${event.pointerId}`));
+  specialButton.addEventListener('contextmenu', event => event.preventDefault());
+
   const gamePanel = $('game-panel');
   let fullscreenBusy = false;
   const isFullscreen = () => document.fullscreenElement === gamePanel || gamePanel.classList.contains('expanded');
@@ -122,7 +220,7 @@
     $('fullscreen').setAttribute('aria-label', active ? 'Salir de pantalla completa' : 'Entrar en pantalla completa');
     $('fullscreen').title = `${active ? 'Salir de pantalla completa' : 'Pantalla completa'} (F)`;
     document.body.classList.toggle('game-expanded', active);
-    keys.clear(); pointer = null;
+    keys.clear(); pointer = null; cancelSpecialCharge();
     requestAnimationFrame(resize);
   }
   async function toggleFullscreen() {
@@ -167,7 +265,7 @@
   function announce(message) { $('announcement').textContent = message; $('announcement').classList.add('visible'); announceTime = 2.2; }
   function setState(next) {
     state = next;
-    keys.clear(); pointer = null;
+    keys.clear(); pointer = null; cancelSpecialCharge();
     $('arena').className = `arena ${next}${boss ? ' boss-encounter' : ''}`;
     $('overlay').hidden = next === 'playing';
     $('pause').hidden = next !== 'playing';
@@ -181,6 +279,7 @@
     if (state === 'paused') { setState('playing'); canvas.focus({ preventScroll: true }); return; }
     if (state === 'playing') return;
     score = 0; wave = 1; lives = 3;
+    special = freshSpecial(); specialDropGranted = false; cancelSpecialCharge();
     boss = null; effects = {}; barrierCharges = 0; droneCooldown = 0; supplyTimer = 8; supplyIndex = 0; pulseRing = null; updateAbilities();
     enemies = []; bullets = []; enemyBullets = []; particles = []; pickups = [];
     player = { x: width / 2, y: height - 90, cooldown: .15, invulnerable: 1.8 };
@@ -214,6 +313,7 @@
     const record = score > best;
     if (record) { best = score; storage.set('best', best); }
     effects = {}; barrierCharges = 0; updateAbilities();
+    special.beam = null; special.quake = 0;
     setState('ended'); updateHud();
     $('announcement').classList.remove('visible');
     $('overlay-label').textContent = record ? 'UN NUEVO RÉCORD. TU NOMBRE ENTRE LAS ESTRELLAS.' : 'FIN DE LA TRANSMISIÓN';
@@ -232,13 +332,16 @@
   window.addEventListener('keydown', event => {
     if ($('help-dialog').open || event.ctrlKey || event.metaKey || event.altKey) return;
     const key = event.key.toLowerCase();
+    if (key === 'r' || (event.target === specialButton && (key === ' ' || key === 'enter'))) {
+      event.preventDefault(); if (!event.repeat) holdSpecial(`key:${key}`); return;
+    }
     if (!event.repeat && key === 'f') { event.preventDefault(); toggleFullscreen(); return; }
     if (key === 'escape' && isFullscreen()) { event.preventDefault(); if (state === 'playing') togglePause(); toggleFullscreen(); return; }
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd', ' '].includes(key) && state === 'playing') { event.preventDefault(); keys.add(key); }
     if (!event.repeat && (key === 'p' || key === 'escape') && (state === 'playing' || state === 'paused')) { event.preventDefault(); togglePause(); }
     if (!event.repeat && key === 'enter' && event.target.tagName !== 'BUTTON' && event.target.tagName !== 'A') { event.preventDefault(); start(); }
   });
-  window.addEventListener('keyup', event => keys.delete(event.key.toLowerCase()));
+  window.addEventListener('keyup', event => { const key = event.key.toLowerCase(); keys.delete(key); releaseSpecial(`key:${key}`); });
   window.addEventListener('blur', () => { if (state === 'playing') togglePause(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'playing') togglePause(); });
   window.addEventListener('pagehide', () => { if (score > best) storage.set('best', score); });
@@ -282,6 +385,9 @@
     if (boss.hp <= 0) {
       const reward = boss.elite ? 25000 : 3000;
       score += reward; burst(boss.x, boss.y, '#c4ff85', 55);
+      if (wave === 10 && !boss.elite && !specialDropGranted) {
+        specialDropGranted = true; dropItem(clamp(boss.x - 80, 35, width - 35), boss.y, 'lightning'); updateSpecialHud();
+      }
       dropItem(boss.x, boss.y, 'repair'); dropItem(clamp(boss.x + 80, 25, width - 25), boss.y, 'arsenal');
       boss = null; enemyBullets = []; $('arena').classList.remove('boss-encounter');
       announce(`MARCIANITO DERROTADO · +${reward} PTS`); tone(95, .4, 'triangle'); updateHud();
@@ -371,8 +477,9 @@
     updateBoss(hostileDt);
     if (state !== 'playing') return;
     for (const bullet of enemyBullets) { bullet.x += bullet.vx * hostileDt; bullet.y += bullet.vy * hostileDt; if (intersects(player, bullet, 17)) { bullet.dead = true; hit(); if (state !== 'playing') return; } }
+    updateSpecial(dt);
     // Iterate a snapshot: a pulse can destroy enemies and create additional drops.
-    for (const orb of [...pickups]) { orb.y += 85 * dt; orb.age += dt; if (intersects(player, orb, 33)) { orb.dead = true; collectItem(orb.type || 'repair'); } }
+    for (const orb of [...pickups]) { orb.y = orb.type === 'lightning' ? Math.min(height - 65, orb.y + 45 * dt) : orb.y + 85 * dt; orb.age += dt; if (intersects(player, orb, 33)) { orb.dead = true; collectItem(orb.type || 'repair'); } }
     for (const p of particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
     enemies = enemies.filter(e => e.hp > 0);
     bullets = bullets.filter(b => !b.dead && b.y > -20 && b.y < height + 25 && b.x > -25 && b.x < width + 25);
@@ -426,7 +533,7 @@
     else { ctx.fillStyle = '#9ad7f4'; ctx.beginPath(); ctx.moveTo(0, -24); ctx.lineTo(20, 20); ctx.lineTo(0, 12); ctx.lineTo(-20, 20); ctx.fill(); }
     ctx.restore();
   }
-  function renderBoss() {
+  function renderBoss(cameraX = 0, cameraY = 0) {
     const visible = Boolean(boss && state !== 'ready' && state !== 'ended');
     $('boss-hud').hidden = !visible;
     // An actual image element preserves the original GIF animation (canvas does not).
@@ -434,8 +541,8 @@
     $('boss-sprite').hidden = !animated;
     if (!visible) return;
     const imageWidth = boss.elite ? 340 : 280, imageHeight = imageWidth * 267 / 400;
-    $('boss-sprite').style.left = `${boss.x / width * 100}%`;
-    $('boss-sprite').style.top = `${boss.y / height * 100}%`;
+    $('boss-sprite').style.left = `${(boss.x + cameraX) / width * 100}%`;
+    $('boss-sprite').style.top = `${(boss.y + cameraY) / height * 100}%`;
     $('boss-sprite').style.width = `${imageWidth / width * 100}%`;
     $('boss-sprite').style.height = `${imageHeight / height * 100}%`;
     const percent = Math.max(0, Math.ceil(boss.hp / boss.maxHp * 100));
@@ -451,20 +558,47 @@
       ctx.restore();
     }
   }
+  function renderSpecial() {
+    if (special.charge > 0) {
+      const progress = special.charge / SPECIAL.chargeTime;
+      ctx.save(); ctx.translate(player.x, player.y - 28);
+      ctx.strokeStyle = '#72f3fa'; ctx.lineWidth = 2 + progress * 2;
+      ctx.beginPath(); ctx.arc(0, 0, 12 + progress * 22, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress); ctx.stroke();
+      ctx.fillStyle = `rgba(114,243,250,${progress * .6})`; ctx.beginPath(); ctx.arc(0, 0, 5 + progress * 9, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    }
+    const beam = special.beam;
+    if (!beam) return;
+    ctx.save();
+    const alpha = Math.min(1, beam.life / .35), spread = SPECIAL.halfWidth;
+    ctx.globalAlpha = alpha;
+    const glow = ctx.createLinearGradient(beam.x - spread, 0, beam.x + spread, 0);
+    glow.addColorStop(0, '#39def600'); glow.addColorStop(.35, '#39def655'); glow.addColorStop(.5, '#cbffffaa'); glow.addColorStop(.65, '#39def655'); glow.addColorStop(1, '#39def600');
+    ctx.fillStyle = glow; ctx.fillRect(beam.x - spread, 0, spread * 2, beam.y);
+    const img = sprites['rayo.png'];
+    ctx.globalCompositeOperation = 'screen'; ctx.shadowColor = '#39eafa'; ctx.shadowBlur = reducedMotion ? 8 : 23;
+    if (img.complete && img.naturalWidth) ctx.drawImage(img, beam.x - spread, 0, spread * 2, Math.max(1, beam.y));
+    else { ctx.fillStyle = '#b6ffff'; ctx.fillRect(beam.x - 12, 0, 24, beam.y); }
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#c4ffff'; ctx.beginPath(); ctx.ellipse(beam.x, beam.y, 32, 12, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#72f3fa'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(beam.x, beam.y, 55, 20, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
   function render() {
     if (!backdrop || backdropWidth !== canvas.width || backdropHeight !== canvas.height) createBackdrop();
-    ctx.clearRect(0, 0, width, height); ctx.drawImage(backdrop, 0, 0, width, height);
+    const magnitude = state === 'playing' && !reducedMotion ? Math.max(shake > 0 ? 4 : 0, 16 * special.quake / SPECIAL.duration) : 0;
+    const cameraX = Math.sin(elapsed * 73) * magnitude, cameraY = Math.cos(elapsed * 91) * magnitude * .7;
+    ctx.clearRect(0, 0, width, height); ctx.save(); ctx.translate(cameraX, cameraY);
+    ctx.drawImage(backdrop, -18, -18, width + 36, height + 36);
     for (const star of stars) { ctx.globalAlpha = star.alpha; ctx.fillStyle = '#c0cde9'; ctx.fillRect(star.x * width, star.y * height, star.size, star.size); }
     ctx.globalAlpha = 1;
-    renderBoss();
+    renderBoss(cameraX, cameraY);
     if (state === 'ready') {
       const x = width * .77, y = height * .66 + (reducedMotion ? 0 : Math.sin(elapsed * 1.4) * 7);
       ctx.save(); ctx.strokeStyle = '#adc3de1c'; ctx.setLineDash([3, 7]); ctx.beginPath(); ctx.ellipse(x, y + 15, 104, 42, -.35, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
       drawShip(x, y, ships[selected], width < 700 ? 1.5 : 2.3, true);
-      return;
+      ctx.restore(); return;
     }
     ctx.save();
-    if (shake > 0) ctx.translate((Math.random() - .5) * 8, (Math.random() - .5) * 8);
     for (const bullet of bullets) { ctx.fillStyle = bullet.homing ? '#ff95cd' : '#d4f885'; ctx.shadowBlur = 9; ctx.shadowColor = ctx.fillStyle; ctx.fillRect(bullet.x - 2, bullet.y - 10, bullet.homing ? 6 : 4, bullet.homing ? 10 : 18); }
     ctx.shadowBlur = 0;
     for (const enemy of enemies) {
@@ -475,8 +609,8 @@
     for (const bullet of enemyBullets) { ctx.fillStyle = '#ff998d'; ctx.shadowBlur = 10; ctx.shadowColor = '#ff706c'; ctx.beginPath(); ctx.arc(bullet.x, bullet.y, 4, 0, Math.PI * 2); ctx.fill(); }
     ctx.shadowBlur = 0;
     for (const orb of pickups) {
-      const item = items[orb.type || 'repair'];
-      ctx.save(); ctx.translate(orb.x, orb.y); ctx.fillStyle = `${item.color}22`; ctx.strokeStyle = item.color; ctx.lineWidth = 1.5;
+      const item = orb.type === 'lightning' ? lightningItem : items[orb.type || 'repair'];
+      ctx.save(); ctx.translate(orb.x, orb.y); if (orb.type === 'lightning') ctx.scale(1.5, 1.5); ctx.fillStyle = `${item.color}22`; ctx.strokeStyle = item.color; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(0, -19); ctx.lineTo(19, 0); ctx.lineTo(0, 19); ctx.lineTo(-19, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.fillStyle = item.color; ctx.font = 'bold 17px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(item.symbol, 0, 1); ctx.restore();
     }
@@ -488,8 +622,9 @@
       if (effects.drive > 0 && selected === 'spectre') { ctx.strokeStyle = '#80ddff33'; ctx.beginPath(); ctx.arc(player.x, player.y, 64, 0, Math.PI * 2); ctx.stroke(); }
       if (effects.core > 0 && selected === 'spectre') { ctx.fillStyle = '#ff95cd'; ctx.beginPath(); ctx.arc(player.x + Math.cos(elapsed * 3) * 42, player.y - 18, 7, 0, Math.PI * 2); ctx.fill(); }
     }
+    renderSpecial();
     for (const p of particles) { ctx.globalAlpha = Math.max(0, p.life / p.maxLife); ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.size, p.size); }
-    ctx.globalAlpha = 1; ctx.restore();
+    ctx.globalAlpha = 1; ctx.restore(); ctx.restore();
   }
   function frame(time) {
     const dt = Math.min((time - lastTime) / 1000 || 0, .04); lastTime = time;
@@ -500,5 +635,6 @@
     if (state === 'playing') update(dt);
     render(); requestAnimationFrame(frame);
   }
+  updateSpecialHud();
   resize(); updateHud(); requestAnimationFrame(frame);
 })();
