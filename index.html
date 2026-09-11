@@ -2,13 +2,20 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b0e14">
   <meta name="description" content="ETOTU: un arcade espacial. Elige tu nave, esquiva enemigos y conquista tu próximo récord.">
   <title>ETOTU — Orbital Arcade</title>
-  <link rel="icon" href="navec.png" type="image/png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="La Navecita">
+  <meta name="mobile-web-app-capable" content="yes">
   <link rel="stylesheet" href="styles.css">
   <script src="magia.js" defer></script>
+  <script src="pwa.js" defer></script>
 </head>
 <body>
   <div class="app-shell">
@@ -58,9 +65,12 @@
       <div class="special-guide"><img src="rayo.png" alt="Rayo de núcleo azul y ramificaciones turquesas"><div><span class="eyebrow">RELIQUIA EXCLUSIVA · JEFE 10</span><h3>Rayo sísmico</h3><p>Recoge la reliquia del Marcianito y mantén <kbd>R</kbd> o el botón del rayo durante <strong>3 segundos</strong>. Un haz devastador atraviesa los enemigos frente a tu nave y sacude el campo de batalla.</p><small>5 USOS POR PARTIDA · 60 S ENTRE DESCARGAS · SOLTAR CANCELA LA CARGA</small></div></div>
       <section class="briefing" aria-label="Consejos de misión"><div><span class="briefing-number">01</span><div><h3>Muévete con intención</h3><p>Esquiva y evita que los enemigos pasen.</p></div><span class="briefing-icon" aria-hidden="true">⌖</span></div><div><span class="briefing-number">02</span><div><h3>Cuida tu escudo</h3><p>Recoge energía para seguir en combate.</p></div><span class="briefing-icon" aria-hidden="true">⛨</span></div><div><span class="briefing-number">03</span><div><h3>Ve un poco más lejos</h3><p>Cada oleada es un nuevo desafío.</p></div><span class="briefing-icon" aria-hidden="true">↗</span></div></section>
     </main>
+    <div class="app-access"><span id="app-availability">JUEGA A TU MANERA</span><button id="install-open" class="help-button" hidden>Instalar app <span>↗</span></button></div>
+    <div id="app-update" class="app-update" hidden role="status"><span>Hay una nueva versión lista para jugar.</span><button id="update-app">Actualizar ahora ↗</button></div>
     <footer><span>HECHO PARA JUGAR. <strong>CREADO PARA VOLVER.</strong></span><span>ETOTU <i>©</i> 2026 <span class="footer-star">✳</span></span></footer>
   </div>
   <dialog id="help-dialog"><button class="dialog-close icon-button" id="close-help" aria-label="Cerrar instrucciones">×</button><div class="eyebrow">MANUAL DE VUELO</div><h2>Todo listo, piloto.</h2><p>Sobrevive a las oleadas y consigue la mayor puntuación. Tu nave dispara automáticamente.</p><ul><li><strong>Muévete</strong><span>WASD, flechas o arrastra sobre el juego.</span></li><li><strong>Pausa</strong><span>P, Escape o el botón Ⅱ. Al salir de la pestaña, la partida se pausa.</span></li><li><strong>Cuida el escudo</strong><span>Tienes 3 cargas. Pierdes una al recibir un impacto o dejar pasar un enemigo. Los Nanobots reparan el escudo: 2 cargas con Vanguard y 1 con Spectre. Con el escudo lleno, dan 50 puntos.</span></li><li><strong>Pantalla completa</strong><span>Pulsa F o el botón de las cuatro esquinas. Vuelve a pulsarlo para salir. Escape también cierra este modo.</span></li><li><strong>Objetos y habilidades</strong><span>Nanobots, Arsenal, Propulsor, Barrera y Núcleo cambian su efecto según tu nave. Consulta el equipamiento bajo el hangar. Los temporizadores se detienen al pausar.</span></li><li><strong>Rayo sísmico</strong><span>Solo lo desbloquea la reliquia que deja el jefe de la oleada 10. Mantén R o el botón del rayo durante 3 segundos; soltar cancela la carga. Tienes 5 usos por partida y 60 segundos de espera entre descargas. Dispara hacia arriba: alinea tu nave con el objetivo. La pausa detiene la espera y cancela la carga.</span></li><li><strong>El Marcianito</strong><span>Te espera en las oleadas 10 y 100. Destrúyelo para avanzar. Al perder la mitad de su salud, entra en furia y cambia sus ataques.</span></li><li><strong>Supera tu récord</strong><span>Destruye enemigos y completa oleadas. El récord se guarda en este navegador.</span></li></ul><button class="launch-button" id="got-it">Entendido <span>↗</span></button></dialog>
+  <dialog id="install-dialog" class="install-dialog" aria-labelledby="install-title" aria-describedby="install-description"><button id="install-close" class="dialog-close icon-button" aria-label="Cerrar aviso de instalación">×</button><img class="install-icon" src="icons/icon-192.png" width="72" height="72" alt=""><div class="eyebrow">TU PRÓXIMA MISIÓN, A UN TOQUE</div><h2 id="install-title">Lleva tu nave contigo.</h2><p id="install-description">Añade La Navecita como app para abrirla desde tu pantalla de inicio y jugar sin conexión después de la primera descarga.</p><div class="install-features"><span>↗ Acceso directo</span><span>◎ Ventana propia</span><span>✦ Sin conexión</span></div><p id="install-instructions"></p><p id="offline-status" role="status">Preparando el juego para usarlo sin conexión…</p><button id="install-confirm" class="launch-button">Instalar app ↗</button><button id="install-later" class="install-later">Ahora no, quiero jugar</button></dialog>
   <audio id="au" src="playsong.ogg" preload="none" loop></audio>
 </body>
 </html>

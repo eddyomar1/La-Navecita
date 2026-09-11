@@ -323,6 +323,7 @@
     $('launch-hint').textContent = 'PULSA ENTER PARA REINTENTAR';
     $('play').focus({ preventScroll: true });
   }
+  document.addEventListener('etotu:pause', () => { if (state === 'playing') togglePause(); });
   $('play').addEventListener('click', start);
   $('pause').addEventListener('click', togglePause);
   $('pause-text').addEventListener('click', togglePause);
@@ -330,7 +331,7 @@
   for (const id of ['close-help', 'got-it']) $(id).addEventListener('click', () => $('help-dialog').close());
   $('help-dialog').addEventListener('click', event => { if (event.target === $('help-dialog')) { const r = event.target.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) event.target.close(); } });
   window.addEventListener('keydown', event => {
-    if ($('help-dialog').open || event.ctrlKey || event.metaKey || event.altKey) return;
+    if ($('help-dialog').open || $('install-dialog').open || event.ctrlKey || event.metaKey || event.altKey) return;
     const key = event.key.toLowerCase();
     if (key === 'r' || (event.target === specialButton && (key === ' ' || key === 'enter'))) {
       event.preventDefault(); if (!event.repeat) holdSpecial(`key:${key}`); return;
